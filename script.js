@@ -38,29 +38,6 @@ const STORAGE_KEYS = {
 
 
 /* ========================================================
-   APPLICATION STATE
-======================================================== */
-
-let salary = loadSalary();
-
-let expenses = loadExpenses();
-
-let selectedCurrency =
-  localStorage.getItem(STORAGE_KEYS.currency) || "INR";
-
-let chartInstance = null;
-
-let toastTimer = null;
-
-let currencyRates = {
-  INR: 1,
-  USD: 0.012,
-  EUR: 0.011,
-  GBP: 0.0095
-};
-
-
-/* ========================================================
    CURRENCY CONFIGURATION
 ======================================================== */
 
@@ -85,6 +62,49 @@ const currencyConfig = {
     symbol: "£",
     locale: "en-GB"
   }
+
+};
+
+
+/* ========================================================
+   APPLICATION STATE
+======================================================== */
+
+let salary = loadSalary();
+
+let expenses = loadExpenses();
+
+const savedCurrency =
+  localStorage.getItem(
+    STORAGE_KEYS.currency
+  );
+
+let selectedCurrency =
+  currencyConfig[savedCurrency]
+    ? savedCurrency
+    : "INR";
+
+let chartInstance = null;
+
+let toastTimer = null;
+
+
+/*
+  Fallback currency rates.
+
+  Base currency:
+  INR
+*/
+
+let currencyRates = {
+
+  INR: 1,
+
+  USD: 0.012,
+
+  EUR: 0.011,
+
+  GBP: 0.0095
 
 };
 
@@ -191,38 +211,37 @@ const elements = {
    LOCAL STORAGE
 ======================================================== */
 
-/*
-  Salary localStorage se retrieve karta hai.
-*/
-
 function loadSalary() {
 
   const savedSalary =
-    localStorage.getItem(STORAGE_KEYS.salary);
+    localStorage.getItem(
+      STORAGE_KEYS.salary
+    );
 
   if (savedSalary === null) {
     return 0;
   }
 
-  const parsedSalary = Number(savedSalary);
+  const parsedSalary =
+    Number(savedSalary);
 
-  return Number.isFinite(parsedSalary)
-    ? parsedSalary
-    : 0;
+  if (
+    Number.isFinite(parsedSalary) &&
+    parsedSalary >= 0
+  ) {
+    return parsedSalary;
+  }
+
+  return 0;
 }
 
-
-/*
-  Expenses array localStorage se retrieve karta hai.
-
-  JSON.parse()
-  String → JavaScript Array
-*/
 
 function loadExpenses() {
 
   const savedExpenses =
-    localStorage.getItem(STORAGE_KEYS.expenses);
+    localStorage.getItem(
+      STORAGE_KEYS.expenses
+    );
 
   if (!savedExpenses) {
     return [];
@@ -233,9 +252,25 @@ function loadExpenses() {
     const parsedExpenses =
       JSON.parse(savedExpenses);
 
-    return Array.isArray(parsedExpenses)
-      ? parsedExpenses
-      : [];
+    if (!Array.isArray(parsedExpenses)) {
+      return [];
+    }
+
+    return parsedExpenses.filter(
+      function (expense) {
+
+        return (
+          expense &&
+          typeof expense.name === "string" &&
+          Number.isFinite(
+            Number(expense.amount)
+          ) &&
+          Number(expense.amount) > 0 &&
+          expense.date
+        );
+
+      }
+    );
 
   } catch (error) {
 
@@ -249,29 +284,37 @@ function loadExpenses() {
 }
 
 
-/*
-  Current state ko localStorage mein save karta hai.
-
-  JSON.stringify()
-  JavaScript Array → String
-*/
-
 function saveState() {
 
-  localStorage.setItem(
-    STORAGE_KEYS.salary,
-    String(salary)
-  );
+  try {
 
-  localStorage.setItem(
-    STORAGE_KEYS.expenses,
-    JSON.stringify(expenses)
-  );
+    localStorage.setItem(
+      STORAGE_KEYS.salary,
+      String(salary)
+    );
 
-  localStorage.setItem(
-    STORAGE_KEYS.currency,
-    selectedCurrency
-  );
+    localStorage.setItem(
+      STORAGE_KEYS.expenses,
+      JSON.stringify(expenses)
+    );
+
+    localStorage.setItem(
+      STORAGE_KEYS.currency,
+      selectedCurrency
+    );
+
+  } catch (error) {
+
+    console.error(
+      "Could not save application state:",
+      error
+    );
+
+    showToast(
+      "Could not save data.",
+      "error"
+    );
+  }
 }
 
 
@@ -282,9 +325,12 @@ function saveState() {
 function getTotalExpenses() {
 
   return expenses.reduce(
-    (total, expense) => {
+    function (total, expense) {
 
-      return total + Number(expense.amount);
+      return (
+        total +
+        Number(expense.amount)
+      );
 
     },
     0
@@ -294,23 +340,16 @@ function getTotalExpenses() {
 
 function getRemainingBalance() {
 
-  return salary - getTotalExpenses();
+  return (
+    salary -
+    getTotalExpenses()
+  );
 }
 
 
-/*
-  Base data INR mein stored hai.
-
-  Example:
-
-  salary = 50000 INR
-
-  USD rate = 0.012
-
-  display =
-  50000 × 0.012
-  = $600
-*/
+/* ========================================================
+   CURRENCY
+======================================================== */
 
 function convertAmount(amount) {
 
@@ -340,14 +379,31 @@ function formatMoney(amount) {
 }
 
 
+function updateCurrencyUI() {
+
+  const config =
+    currencyConfig[selectedCurrency];
+
+  elements.navCurrency.value =
+    selectedCurrency;
+
+  elements.headerCurrency.value =
+    selectedCurrency;
+
+  elements.currencySymbol.textContent =
+    config.symbol;
+}
+
+
 /* ========================================================
-   CATEGORY DETECTION
+   CATEGORY
 ======================================================== */
 
 function getCategory(name) {
 
   const value =
     name.toLowerCase();
+
 
   if (
     value.includes("rent") ||
@@ -359,7 +415,6 @@ function getCategory(name) {
       name: "Home",
       icon: "🏠"
     };
-
   }
 
 
@@ -374,7 +429,6 @@ function getCategory(name) {
       name: "Food",
       icon: "🍴"
     };
-
   }
 
 
@@ -389,7 +443,6 @@ function getCategory(name) {
       name: "Technology",
       icon: "💻"
     };
-
   }
 
 
@@ -401,7 +454,7 @@ function getCategory(name) {
 
 
 /* ========================================================
-   DATE FORMAT
+   DATE
 ======================================================== */
 
 function formatDate(dateString) {
@@ -409,8 +462,13 @@ function formatDate(dateString) {
   const date =
     new Date(dateString);
 
-  if (Number.isNaN(date.getTime())) {
-    return dateString;
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+
+    return "Unknown date";
   }
 
   return new Intl.DateTimeFormat(
@@ -425,7 +483,7 @@ function formatDate(dateString) {
 
 
 /* ========================================================
-   RENDER SUMMARY
+   SUMMARY
 ======================================================== */
 
 function renderSummary() {
@@ -454,7 +512,7 @@ function renderSummary() {
 
 
   /*
-    Remaining balance
+    Balance
   */
 
   elements.remainingBalance.textContent =
@@ -471,12 +529,13 @@ function renderSummary() {
 
     percentage =
       (remaining / salary) * 100;
-
   }
 
-
   const safePercentage =
-    Math.max(0, percentage);
+    Math.max(
+      0,
+      percentage
+    );
 
 
   elements.balancePercentage.textContent =
@@ -485,8 +544,6 @@ function renderSummary() {
 
   /*
     Critical threshold
-
-    Remaining < 10% salary
   */
 
   const isCritical =
@@ -517,7 +574,6 @@ function renderSummary() {
 
     elements.balanceCard.style.borderColor =
       "";
-
   }
 
 
@@ -531,24 +587,28 @@ function renderSummary() {
       `Over budget by ${formatMoney(
         Math.abs(remaining)
       )}`;
-
   }
 
 
   /*
-    Chart legend
+    Chart values
   */
 
   elements.chartExpenseValue.textContent =
     formatMoney(totalExpenses);
 
   elements.chartBalanceValue.textContent =
-    formatMoney(Math.max(remaining, 0));
+    formatMoney(
+      Math.max(
+        remaining,
+        0
+      )
+    );
 }
 
 
 /* ========================================================
-   RENDER EXPENSE LIST
+   EXPENSE LIST
 ======================================================== */
 
 function renderExpenses() {
@@ -559,10 +619,6 @@ function renderExpenses() {
     expenses.length;
 
 
-  /*
-    No expenses
-  */
-
   if (expenses.length === 0) {
 
     const empty =
@@ -571,49 +627,71 @@ function renderExpenses() {
     empty.className =
       "empty-state";
 
-    empty.innerHTML = `
-      <div class="empty-icon">🧾</div>
 
-      <strong>No expenses yet</strong>
+    const icon =
+      document.createElement("div");
 
-      <span>
-        Add your first expense to start tracking.
-      </span>
-    `;
+    icon.className =
+      "empty-icon";
 
-    elements.expenseList.appendChild(empty);
+    icon.textContent =
+      "🧾";
+
+
+    const title =
+      document.createElement("strong");
+
+    title.textContent =
+      "No expenses yet";
+
+
+    const message =
+      document.createElement("span");
+
+    message.textContent =
+      "Add your first expense to start tracking.";
+
+
+    empty.appendChild(icon);
+    empty.appendChild(title);
+    empty.appendChild(message);
+
+    elements.expenseList.appendChild(
+      empty
+    );
 
     return;
   }
 
 
-  /*
-    Newest first
-  */
-
   const sortedExpenses =
     [...expenses].sort(
-      (a, b) =>
-        new Date(b.date) -
-        new Date(a.date)
+      function (a, b) {
+
+        return (
+          new Date(b.date) -
+          new Date(a.date)
+        );
+      }
     );
 
 
   sortedExpenses.forEach(
-    expense => {
+    function (expense) {
 
       const row =
         createExpenseRow(expense);
 
-      elements.expenseList.appendChild(row);
-
+      elements.expenseList.appendChild(
+        row
+      );
     }
   );
 }
 
 
 /* ========================================================
-   CREATE EXPENSE ROW
+   EXPENSE ROW
 ======================================================== */
 
 function createExpenseRow(expense) {
@@ -626,7 +704,7 @@ function createExpenseRow(expense) {
 
 
   /*
-    Main section
+    Main
   */
 
   const main =
@@ -637,11 +715,14 @@ function createExpenseRow(expense) {
 
 
   /*
-    Category icon
+    Category
   */
 
   const category =
-    getCategory(expense.name);
+    getCategory(
+      expense.name
+    );
+
 
   const categoryElement =
     document.createElement("div");
@@ -652,9 +733,14 @@ function createExpenseRow(expense) {
   categoryElement.textContent =
     category.icon;
 
+  categoryElement.setAttribute(
+    "aria-label",
+    category.name
+  );
+
 
   /*
-    Expense info
+    Information
   */
 
   const info =
@@ -669,11 +755,6 @@ function createExpenseRow(expense) {
 
   name.className =
     "expense-name";
-
-  /*
-    textContent use kar rahe hain
-    taaki user input HTML inject na kar sake.
-  */
 
   name.textContent =
     expense.name;
@@ -694,9 +775,13 @@ function createExpenseRow(expense) {
   info.appendChild(name);
   info.appendChild(date);
 
+  main.appendChild(
+    categoryElement
+  );
 
-  main.appendChild(categoryElement);
-  main.appendChild(info);
+  main.appendChild(
+    info
+  );
 
 
   /*
@@ -710,21 +795,23 @@ function createExpenseRow(expense) {
     "expense-amount";
 
   amount.textContent =
-    `-${formatMoney(expense.amount)}`;
+    `-${formatMoney(
+      expense.amount
+    )}`;
 
 
   /*
-    Delete button
+    Delete
   */
 
   const deleteButton =
     document.createElement("button");
 
-  deleteButton.className =
-    "delete-button";
-
   deleteButton.type =
     "button";
+
+  deleteButton.className =
+    "delete-button";
 
   deleteButton.textContent =
     "🗑";
@@ -737,13 +824,12 @@ function createExpenseRow(expense) {
 
   deleteButton.addEventListener(
     "click",
-    () => {
+    function () {
 
       showDeleteConfirmation(
         row,
         expense.id
       );
-
     }
   );
 
@@ -776,13 +862,15 @@ function showDeleteConfirmation(
   }
 
 
-  const button =
+  const deleteButton =
     row.querySelector(
       ".delete-button"
     );
 
-  if (button) {
-    button.style.display = "none";
+  if (deleteButton) {
+
+    deleteButton.style.display =
+      "none";
   }
 
 
@@ -806,6 +894,9 @@ function showDeleteConfirmation(
   const yes =
     document.createElement("button");
 
+  yes.type =
+    "button";
+
   yes.className =
     "confirm-yes";
 
@@ -816,6 +907,9 @@ function showDeleteConfirmation(
   const no =
     document.createElement("button");
 
+  no.type =
+    "button";
+
   no.className =
     "confirm-no";
 
@@ -825,24 +919,26 @@ function showDeleteConfirmation(
 
   yes.addEventListener(
     "click",
-    () => {
+    function () {
 
-      deleteExpense(expenseId);
-
+      deleteExpense(
+        expenseId
+      );
     }
   );
 
 
   no.addEventListener(
     "click",
-    () => {
+    function () {
 
       confirmation.remove();
 
-      if (button) {
-        button.style.display = "";
-      }
+      if (deleteButton) {
 
+        deleteButton.style.display =
+          "";
+      }
     }
   );
 
@@ -851,7 +947,9 @@ function showDeleteConfirmation(
   confirmation.appendChild(yes);
   confirmation.appendChild(no);
 
-  row.appendChild(confirmation);
+  row.appendChild(
+    confirmation
+  );
 }
 
 
@@ -863,24 +961,16 @@ function deleteExpense(id) {
 
   expenses =
     expenses.filter(
-      expense =>
-        expense.id !== id
+      function (expense) {
+
+        return expense.id !== id;
+      }
     );
 
 
-  /*
-    Update localStorage
-  */
-
   saveState();
 
-
-  /*
-    Update DOM
-  */
-
   renderAll();
-
 
   showToast(
     "Expense deleted successfully."
@@ -889,10 +979,20 @@ function deleteExpense(id) {
 
 
 /* ========================================================
-   CHART.JS
+   CHART
 ======================================================== */
 
 function renderChart() {
+
+  if (!window.Chart) {
+
+    console.error(
+      "Chart.js could not be loaded."
+    );
+
+    return;
+  }
+
 
   const totalExpenses =
     getTotalExpenses();
@@ -905,11 +1005,7 @@ function renderChart() {
 
 
   /*
-    Chart already exists.
-
-    Assignment FAQ:
-    destroy previous instance
-    before creating a new one.
+    Destroy old chart.
   */
 
   if (chartInstance) {
@@ -917,12 +1013,12 @@ function renderChart() {
     chartInstance.destroy();
 
     chartInstance = null;
-
   }
 
 
   /*
-    If no salary, show empty chart.
+    Empty chart when salary
+    is not entered.
   */
 
   const expenseData =
@@ -950,6 +1046,7 @@ function renderChart() {
           ],
 
           datasets: [
+
             {
               data: [
                 expenseData,
@@ -965,8 +1062,8 @@ function renderChart() {
 
               hoverOffset: 5
             }
-          ]
 
+          ]
         },
 
         options: {
@@ -987,29 +1084,27 @@ function renderChart() {
 
               callbacks: {
 
-                label: function(context) {
+                label:
+                  function (context) {
 
-                  return `${context.label}: ${formatMoney(
-                    context.raw
-                  )}`;
-
-                }
-
+                    return (
+                      `${context.label}: ` +
+                      `${formatMoney(
+                        context.raw
+                      )}`
+                    );
+                  }
               }
-
             }
-
           }
-
         }
-
       }
     );
 }
 
 
 /* ========================================================
-   ADD EXPENSE VALIDATION
+   VALIDATION
 ======================================================== */
 
 function validateExpense() {
@@ -1025,12 +1120,14 @@ function validateExpense() {
 
 
   /*
-    Reset errors
+    Reset errors.
   */
 
-  elements.nameError.textContent = "";
+  elements.nameError.textContent =
+    "";
 
-  elements.amountError.textContent = "";
+  elements.amountError.textContent =
+    "";
 
   elements.expenseName.classList.remove(
     "input-error"
@@ -1042,7 +1139,7 @@ function validateExpense() {
 
 
   /*
-    Name validation
+    Name
   */
 
   if (!name) {
@@ -1055,12 +1152,11 @@ function validateExpense() {
     );
 
     valid = false;
-
   }
 
 
   /*
-    Amount validation
+    Amount
   */
 
   if (!amountValue) {
@@ -1079,7 +1175,6 @@ function validateExpense() {
     const amount =
       Number(amountValue);
 
-
     if (
       !Number.isFinite(amount) ||
       amount <= 0
@@ -1093,9 +1188,7 @@ function validateExpense() {
       );
 
       valid = false;
-
     }
-
   }
 
 
@@ -1109,18 +1202,10 @@ function validateExpense() {
 
 elements.expenseForm.addEventListener(
   "submit",
-  function(event) {
-
-    /*
-      Prevent browser page reload.
-    */
+  function (event) {
 
     event.preventDefault();
 
-
-    /*
-      Validation
-    */
 
     if (!validateExpense()) {
       return;
@@ -1136,14 +1221,10 @@ elements.expenseForm.addEventListener(
       );
 
 
-    /*
-      Create new expense object
-    */
-
     const expense = {
 
       id:
-        Date.now(),
+        crypto.randomUUID(),
 
       name,
 
@@ -1154,57 +1235,37 @@ elements.expenseForm.addEventListener(
 
       category:
         getCategory(name).name
-
     };
 
 
-    /*
-      Add to state
-    */
+    expenses.push(
+      expense
+    );
 
-    expenses.push(expense);
-
-
-    /*
-      Save to localStorage
-    */
 
     saveState();
 
 
-    /*
-      Clear form
-    */
-
     elements.expenseForm.reset();
 
-
-    /*
-      Re-render application
-    */
 
     renderAll();
 
 
-    /*
-      Success message
-    */
-
     showToast(
       "Expense added successfully."
     );
-
   }
 );
 
 
 /* ========================================================
-   SALARY FORM
+   SALARY
 ======================================================== */
 
 elements.salaryForm.addEventListener(
   "submit",
-  function(event) {
+  function (event) {
 
     event.preventDefault();
 
@@ -1249,7 +1310,6 @@ elements.salaryForm.addEventListener(
     showToast(
       "Salary updated successfully."
     );
-
   }
 );
 
@@ -1260,7 +1320,7 @@ elements.salaryForm.addEventListener(
 
 elements.editSalary.addEventListener(
   "click",
-  function() {
+  function () {
 
     elements.salaryInput.value =
       salary || "";
@@ -1274,56 +1334,17 @@ elements.editSalary.addEventListener(
     );
 
     elements.salaryInput.focus();
-
   }
 );
 
 
 /* ========================================================
-   CURRENCY
+   CURRENCY API
 ======================================================== */
-
-function updateCurrencyUI() {
-
-  const config =
-    currencyConfig[selectedCurrency];
-
-
-  elements.navCurrency.value =
-    selectedCurrency;
-
-  elements.headerCurrency.value =
-    selectedCurrency;
-
-
-  elements.currencySymbol.textContent =
-    config.symbol;
-
-
-  renderAll();
-}
-
-
-/*
-  Currency API
-
-  Frankfurter free endpoint.
-
-  INR → USD/EUR/GBP
-*/
 
 async function fetchCurrencyRates() {
 
   try {
-
-    /*
-      Frankfurter supports
-      EUR-based conversion directly.
-
-      For maximum reliability,
-      we use the API only for
-      USD/EUR/GBP rates when possible.
-    */
 
     const response =
       await fetch(
@@ -1332,6 +1353,7 @@ async function fetchCurrencyRates() {
 
 
     if (!response.ok) {
+
       throw new Error(
         "Currency API request failed."
       );
@@ -1342,26 +1364,27 @@ async function fetchCurrencyRates() {
       await response.json();
 
 
-    if (data.rates) {
+    if (
+      data.rates &&
+      typeof data.rates === "object"
+    ) {
 
       currencyRates = {
 
         INR: 1,
 
         USD:
-          data.rates.USD ||
+          Number(data.rates.USD) ||
           currencyRates.USD,
 
         EUR:
-          data.rates.EUR ||
+          Number(data.rates.EUR) ||
           currencyRates.EUR,
 
         GBP:
-          data.rates.GBP ||
+          Number(data.rates.GBP) ||
           currencyRates.GBP
-
       };
-
     }
 
 
@@ -1370,27 +1393,29 @@ async function fetchCurrencyRates() {
   } catch (error) {
 
     console.warn(
-      "Using fallback currency rates:",
+      "Currency API failed. Using fallback rates.",
       error
     );
-
-    /*
-      Application still works
-      using fallback rates.
-    */
 
     return false;
   }
 }
 
 
-/*
-  Change currency
-*/
+/* ========================================================
+   CHANGE CURRENCY
+======================================================== */
 
 async function changeCurrency(
   newCurrency
 ) {
+
+  if (
+    !currencyConfig[newCurrency]
+  ) {
+    return;
+  }
+
 
   if (
     newCurrency ===
@@ -1405,38 +1430,20 @@ async function changeCurrency(
   );
 
 
-  /*
-    API call
-  */
-
   await fetchCurrencyRates();
 
-
-  /*
-    Update selected currency
-  */
 
   selectedCurrency =
     newCurrency;
 
 
-  /*
-    Save state
-  */
-
   saveState();
 
 
-  /*
-    Update UI
-  */
-
   updateCurrencyUI();
 
+  renderAll();
 
-  /*
-    Hide loading
-  */
 
   elements.currencyLoading.classList.add(
     "hidden"
@@ -1449,43 +1456,37 @@ async function changeCurrency(
 }
 
 
-/*
-  Both currency selectors
-*/
+/* ========================================================
+   CURRENCY SELECTORS
+======================================================== */
 
 elements.navCurrency.addEventListener(
   "change",
-  event => {
+  function (event) {
 
     changeCurrency(
       event.target.value
     );
-
   }
 );
 
 
 elements.headerCurrency.addEventListener(
   "change",
-  event => {
+  function (event) {
 
     changeCurrency(
       event.target.value
     );
-
   }
 );
 
 
 /* ========================================================
-   PDF REPORT — jsPDF
+   PDF REPORT
 ======================================================== */
 
 function generatePDFReport() {
-
-  /*
-    Check jsPDF
-  */
 
   if (
     !window.jspdf ||
@@ -1517,163 +1518,630 @@ function generatePDFReport() {
     getRemainingBalance();
 
 
+  const pageWidth =
+    doc.internal.pageSize.getWidth();
+
+  const pageHeight =
+    doc.internal.pageSize.getHeight();
+
+  const margin = 20;
+
+
   /*
-    Header
+  =========================================================
+  HEADER
+  =========================================================
   */
 
-  doc.setFontSize(22);
+  doc.setFillColor(
+    15,
+    23,
+    42
+  );
+
+  doc.rect(
+    0,
+    0,
+    pageWidth,
+    42,
+    "F"
+  );
+
+
+  doc.setTextColor(
+    255,
+    255,
+    255
+  );
+
 
   doc.setFont(
     "helvetica",
     "bold"
   );
 
-  doc.text(
-    "Cash-Flow Financial Report",
-    20,
-    25
+  doc.setFontSize(
+    22
   );
 
+  doc.text(
+    "Cash-Flow",
+    margin,
+    18
+  );
 
-  doc.setFontSize(11);
 
   doc.setFont(
     "helvetica",
     "normal"
   );
 
+  doc.setFontSize(
+    10
+  );
+
   doc.text(
-    `Generated: ${new Date().toLocaleString()}`,
-    20,
-    34
+    "Salary & Expense Report",
+    margin,
+    27
+  );
+
+
+  const generatedDate =
+    new Date().toLocaleDateString(
+      "en-IN",
+      {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+      }
+    );
+
+
+  doc.text(
+    `Generated: ${generatedDate}`,
+    pageWidth - margin,
+    22,
+    {
+      align: "right"
+    }
   );
 
 
   /*
-    Summary
+  =========================================================
+  SUMMARY
+  =========================================================
   */
 
-  doc.setFontSize(14);
+  doc.setTextColor(
+    15,
+    23,
+    42
+  );
 
   doc.setFont(
     "helvetica",
     "bold"
+  );
+
+  doc.setFontSize(
+    15
   );
 
   doc.text(
     "Financial Summary",
-    20,
-    50
+    margin,
+    58
   );
 
 
-  doc.setFontSize(11);
+  const cardTop = 66;
 
-  doc.setFont(
-    "helvetica",
-    "normal"
+  const cardGap = 6;
+
+  const cardWidth =
+    (
+      pageWidth -
+      margin * 2 -
+      cardGap * 2
+    ) / 3;
+
+  const cardHeight = 35;
+
+
+  drawSummaryCard(
+    doc,
+    margin,
+    cardTop,
+    cardWidth,
+    cardHeight,
+    "TOTAL SALARY",
+    getPDFMoney(salary)
   );
 
-  doc.text(
-    `Total Salary: ${formatMoney(salary)}`,
-    20,
-    62
+
+  drawSummaryCard(
+    doc,
+    margin +
+      cardWidth +
+      cardGap,
+    cardTop,
+    cardWidth,
+    cardHeight,
+    "TOTAL EXPENSES",
+    getPDFMoney(totalExpenses)
   );
 
-  doc.text(
-    `Total Expenses: ${formatMoney(totalExpenses)}`,
-    20,
-    71
-  );
 
-  doc.text(
-    `Remaining Balance: ${formatMoney(remaining)}`,
-    20,
-    80
+  drawSummaryCard(
+    doc,
+    margin +
+      (cardWidth + cardGap) * 2,
+    cardTop,
+    cardWidth,
+    cardHeight,
+    "REMAINING BALANCE",
+    getPDFMoney(remaining)
   );
 
 
   /*
-    Expenses
+  =========================================================
+  EXPENSE DETAILS
+  =========================================================
   */
 
-  doc.setFontSize(14);
+  let y = 122;
+
+
+  doc.setTextColor(
+    15,
+    23,
+    42
+  );
 
   doc.setFont(
     "helvetica",
     "bold"
   );
 
+  doc.setFontSize(
+    15
+  );
+
   doc.text(
-    "Expense List",
-    20,
-    98
+    "Expense Details",
+    margin,
+    y
   );
 
 
-  let y =
-    110;
+  y += 10;
 
 
-  doc.setFontSize(10);
+  const tableX =
+    margin;
 
-  doc.setFont(
-    "helvetica",
-    "normal"
+  const tableWidth =
+    pageWidth -
+    margin * 2;
+
+
+  /*
+    Table columns
+  */
+
+  const colNo = 14;
+
+  const colName = 75;
+
+  const colDate = 42;
+
+
+  /*
+    Table header
+  */
+
+  drawTableHeader(
+    doc,
+    tableX,
+    y,
+    tableWidth,
+    12
   );
 
 
-  if (expenses.length === 0) {
+  y += 12;
+
+
+  const sortedExpenses =
+    [...expenses].sort(
+      function (a, b) {
+
+        return (
+          new Date(b.date) -
+          new Date(a.date)
+        );
+      }
+    );
+
+
+  /*
+    Empty state
+  */
+
+  if (
+    sortedExpenses.length === 0
+  ) {
+
+    doc.setFont(
+      "helvetica",
+      "normal"
+    );
+
+    doc.setFontSize(
+      10
+    );
+
+    doc.setTextColor(
+      100,
+      116,
+      139
+    );
 
     doc.text(
       "No expenses recorded.",
-      20,
-      y
+      tableX + 5,
+      y + 8
     );
 
   } else {
 
-    expenses.forEach(
-      (expense, index) => {
+    sortedExpenses.forEach(
+      function (expense, index) {
 
         /*
-          New page if needed.
+          New page
         */
 
-        if (y > 270) {
+        if (
+          y >
+          pageHeight - 35
+        ) {
+
+          addPDFPageFooter(
+            doc,
+            pageWidth,
+            pageHeight
+          );
 
           doc.addPage();
 
-          y = 20;
+          y = 25;
 
+
+          drawTableHeader(
+            doc,
+            tableX,
+            y,
+            tableWidth,
+            12
+          );
+
+          y += 12;
         }
 
 
-        const line =
-          `${index + 1}. ${expense.name} — ${formatMoney(
-            expense.amount
-          )} — ${formatDate(
-            expense.date
-          )}`;
+        /*
+          Alternate row
+        */
+
+        if (
+          index % 2 === 0
+        ) {
+
+          doc.setFillColor(
+            248,
+            250,
+            252
+          );
+
+          doc.rect(
+            tableX,
+            y,
+            tableWidth,
+            13,
+            "F"
+          );
+        }
 
 
-        doc.text(
-          line,
-          20,
-          y
+        /*
+          Row text
+        */
+
+        doc.setFont(
+          "helvetica",
+          "normal"
+        );
+
+        doc.setFontSize(
+          9
+        );
+
+        doc.setTextColor(
+          15,
+          23,
+          42
         );
 
 
-        y += 9;
+        /*
+          Number
+        */
 
+        doc.text(
+          String(index + 1),
+          tableX + 4,
+          y + 8
+        );
+
+
+        /*
+          Expense name
+        */
+
+        const expenseName =
+          expense.name.length > 32
+            ? expense.name.substring(
+                0,
+                32
+              ) + "..."
+            : expense.name;
+
+
+        doc.text(
+          expenseName,
+          tableX + colNo,
+          y + 8
+        );
+
+
+        /*
+          Date
+        */
+
+        doc.setTextColor(
+          71,
+          85,
+          105
+        );
+
+
+        doc.text(
+          formatDate(
+            expense.date
+          ),
+          tableX +
+            colNo +
+            colName,
+          y + 8
+        );
+
+
+        /*
+          Amount
+        */
+
+        doc.setTextColor(
+          15,
+          23,
+          42
+        );
+
+        doc.setFont(
+          "helvetica",
+          "bold"
+        );
+
+
+        const pdfAmount =
+          getPDFMoney(
+            expense.amount
+          );
+
+
+        doc.text(
+          pdfAmount,
+          pageWidth - margin - 4,
+          y + 8,
+          {
+            align: "right"
+          }
+        );
+
+
+        /*
+          Row border
+        */
+
+        doc.setDrawColor(
+          226,
+          232,
+          240
+        );
+
+        doc.setLineWidth(
+          0.2
+        );
+
+        doc.line(
+          tableX,
+          y + 13,
+          tableX + tableWidth,
+          y + 13
+        );
+
+
+        y += 13;
       }
     );
-
   }
 
 
   /*
-    Save PDF
+  =========================================================
+  FINAL BALANCE
+  =========================================================
+  */
+
+  y += 12;
+
+
+  if (
+    y >
+    pageHeight - 55
+  ) {
+
+    addPDFPageFooter(
+      doc,
+      pageWidth,
+      pageHeight
+    );
+
+    doc.addPage();
+
+    y = 30;
+  }
+
+
+  doc.setFillColor(
+    239,
+    246,
+    255
+  );
+
+
+  doc.roundedRect(
+    margin,
+    y,
+    pageWidth - margin * 2,
+    38,
+    4,
+    4,
+    "F"
+  );
+
+
+  doc.setTextColor(
+    30,
+    41,
+    59
+  );
+
+  doc.setFont(
+    "helvetica",
+    "bold"
+  );
+
+  doc.setFontSize(
+    10
+  );
+
+
+  doc.text(
+    "FINAL BALANCE",
+    margin + 8,
+    y + 12
+  );
+
+
+  doc.setFontSize(
+    18
+  );
+
+
+  if (remaining < 0) {
+
+    doc.setTextColor(
+      220,
+      38,
+      38
+    );
+
+  } else {
+
+    doc.setTextColor(
+      22,
+      163,
+      74
+    );
+  }
+
+
+  doc.text(
+    getPDFMoney(remaining),
+    margin + 8,
+    y + 27
+  );
+
+
+  /*
+  =========================================================
+  10% WARNING
+  =========================================================
+  */
+
+  if (
+    salary > 0 &&
+    remaining < salary * 0.10
+  ) {
+
+    doc.setFont(
+      "helvetica",
+      "normal"
+    );
+
+    doc.setFontSize(
+      9
+    );
+
+    doc.setTextColor(
+      220,
+      38,
+      38
+    );
+
+
+    doc.text(
+      "Warning: Remaining balance is below 10% of salary.",
+      pageWidth - margin,
+      y + 12,
+      {
+        align: "right"
+      }
+    );
+  }
+
+
+  /*
+  =========================================================
+  FOOTER
+  =========================================================
+  */
+
+  addPDFPageFooter(
+    doc,
+    pageWidth,
+    pageHeight
+  );
+
+
+  /*
+  =========================================================
+  DOWNLOAD
+  =========================================================
   */
 
   doc.save(
@@ -1687,11 +2155,257 @@ function generatePDFReport() {
 }
 
 
+/* ========================================================
+   PDF MONEY
+======================================================== */
+
+function getPDFMoney(amount) {
+
+  return (
+    `${selectedCurrency} ` +
+    `${convertAmount(amount).toFixed(2)}`
+  );
+}
+
+
+/* ========================================================
+   PDF SUMMARY CARD
+======================================================== */
+
+function drawSummaryCard(
+  doc,
+  x,
+  y,
+  width,
+  height,
+  label,
+  value
+) {
+
+  doc.setFillColor(
+    248,
+    250,
+    252
+  );
+
+
+  doc.roundedRect(
+    x,
+    y,
+    width,
+    height,
+    4,
+    4,
+    "F"
+  );
+
+
+  doc.setTextColor(
+    100,
+    116,
+    139
+  );
+
+
+  doc.setFont(
+    "helvetica",
+    "bold"
+  );
+
+  doc.setFontSize(
+    7
+  );
+
+
+  doc.text(
+    label,
+    x + 6,
+    y + 10
+  );
+
+
+  doc.setTextColor(
+    15,
+    23,
+    42
+  );
+
+
+  doc.setFont(
+    "helvetica",
+    "bold"
+  );
+
+  doc.setFontSize(
+    12
+  );
+
+
+  doc.text(
+    value,
+    x + 6,
+    y + 24
+  );
+}
+
+
+/* ========================================================
+   PDF TABLE HEADER
+======================================================== */
+
+function drawTableHeader(
+  doc,
+  x,
+  y,
+  width,
+  height
+) {
+
+  doc.setFillColor(
+    15,
+    23,
+    42
+  );
+
+
+  doc.roundedRect(
+    x,
+    y,
+    width,
+    height,
+    2,
+    2,
+    "F"
+  );
+
+
+  doc.setTextColor(
+    255,
+    255,
+    255
+  );
+
+
+  doc.setFont(
+    "helvetica",
+    "bold"
+  );
+
+  doc.setFontSize(
+    8
+  );
+
+
+  doc.text(
+    "#",
+    x + 4,
+    y + 8
+  );
+
+
+  doc.text(
+    "EXPENSE",
+    x + 14,
+    y + 8
+  );
+
+
+  doc.text(
+    "DATE",
+    x + 89,
+    y + 8
+  );
+
+
+  doc.text(
+    "AMOUNT",
+    x + width - 4,
+    y + 8,
+    {
+      align: "right"
+    }
+  );
+}
+
+
+/* ========================================================
+   PDF FOOTER
+======================================================== */
+
+function addPDFPageFooter(
+  doc,
+  pageWidth,
+  pageHeight
+) {
+
+  const pageNumber =
+    doc.internal.getNumberOfPages();
+
+
+  doc.setDrawColor(
+    226,
+    232,
+    240
+  );
+
+
+  doc.setLineWidth(
+    0.3
+  );
+
+
+  doc.line(
+    20,
+    pageHeight - 18,
+    pageWidth - 20,
+    pageHeight - 18
+  );
+
+
+  doc.setTextColor(
+    100,
+    116,
+    139
+  );
+
+
+  doc.setFont(
+    "helvetica",
+    "normal"
+  );
+
+
+  doc.setFontSize(
+    8
+  );
+
+
+  doc.text(
+    "Cash-Flow — Salary & Expense Tracker",
+    20,
+    pageHeight - 10
+  );
+
+
+  doc.text(
+    `Page ${pageNumber}`,
+    pageWidth - 20,
+    pageHeight - 10,
+    {
+      align: "right"
+    }
+  );
+}
+
+
+/* ========================================================
+   PDF BUTTONS
+======================================================== */
+
 elements.downloadReport.addEventListener(
   "click",
   generatePDFReport
 );
-
 
 elements.downloadReportBottom.addEventListener(
   "click",
@@ -1708,14 +2422,18 @@ function showToast(
   type = "success"
 ) {
 
-  clearTimeout(toastTimer);
+  clearTimeout(
+    toastTimer
+  );
 
 
   elements.toastMessage.textContent =
     message;
 
 
-  if (type === "error") {
+  if (
+    type === "error"
+  ) {
 
     elements.toastIcon.textContent =
       "!";
@@ -1730,7 +2448,6 @@ function showToast(
 
     elements.toastIcon.style.background =
       "var(--success)";
-
   }
 
 
@@ -1741,7 +2458,7 @@ function showToast(
 
   toastTimer =
     setTimeout(
-      () => {
+      function () {
 
         elements.toast.classList.remove(
           "show"
@@ -1753,51 +2470,51 @@ function showToast(
 }
 
 
-/* ========================================================
-   MOBILE MENU
-======================================================== */
 
 elements.menuButton.addEventListener(
   "click",
-  function() {
+  function () {
 
-    elements.mobileMenu.classList.toggle(
-      "open"
+    const isOpen =
+      elements.mobileMenu.classList.toggle(
+        "open"
+      );
+
+
+    elements.menuButton.setAttribute(
+      "aria-expanded",
+      String(isOpen)
     );
-
   }
 );
 
 
 document
-  .querySelectorAll(
-    ".mobile-menu a"
-  )
+  .querySelectorAll(".mobile-menu a")
   .forEach(
-    link => {
+    function (link) {
 
       link.addEventListener(
         "click",
-        () => {
+        function () {
 
           elements.mobileMenu.classList.remove(
             "open"
           );
 
+          elements.menuButton.setAttribute(
+            "aria-expanded",
+            "false"
+          );
         }
       );
-
     }
   );
 
 
-/* ========================================================
-   GLOBAL INPUT ERROR RESET
-======================================================== */
-
 elements.expenseName.addEventListener(
   "input",
-  function() {
+  function () {
 
     this.classList.remove(
       "input-error"
@@ -1805,14 +2522,13 @@ elements.expenseName.addEventListener(
 
     elements.nameError.textContent =
       "";
-
   }
 );
 
 
 elements.expenseAmount.addEventListener(
   "input",
-  function() {
+  function () {
 
     this.classList.remove(
       "input-error"
@@ -1820,110 +2536,91 @@ elements.expenseAmount.addEventListener(
 
     elements.amountError.textContent =
       "";
-
   }
 );
 
 
-/* ========================================================
-   MASTER RENDER FUNCTION
-======================================================== */
+
 
 function renderAll() {
 
-  /*
-    P0:
-    Calculate and display values.
-  */
-
   renderSummary();
-
-
-  /*
-    P1:
-    Render expense list.
-  */
 
   renderExpenses();
 
-
-  /*
-    P1:
-    Render Chart.js.
-  */
-
   renderChart();
 
-
-  /*
-    Update currency UI.
-  */
-
-  const config =
-    currencyConfig[selectedCurrency];
-
-  elements.currencySymbol.textContent =
-    config.symbol;
+  updateCurrencyUI();
 }
 
 
 /* ========================================================
-   INITIALIZE APPLICATION
+   INITIALIZE
 ======================================================== */
 
 async function initializeApp() {
 
   /*
-    Load currency rates.
-
-    If API fails,
-    fallback rates remain active.
+    Get latest currency rates.
   */
 
   await fetchCurrencyRates();
 
 
   /*
-    Sync currency selectors.
+    Set currency UI.
   */
 
   updateCurrencyUI();
 
 
   /*
-    Render saved state.
+    Render saved data.
   */
 
   renderAll();
 
 
   /*
-    Salary input
+    Salary field.
   */
 
   elements.salaryInput.value =
     salary || "";
 
 
+  /*
+    Salary form state.
+  */
+
+  if (salary > 0) {
+
+    elements.salaryForm.classList.add(
+      "hidden"
+    );
+
+    elements.editSalary.classList.remove(
+      "hidden"
+    );
+
+  } else {
+
+    elements.salaryForm.classList.remove(
+      "hidden"
+    );
+
+    elements.editSalary.classList.add(
+      "hidden"
+    );
+  }
+
+
   console.log(
     "Cash-Flow initialized successfully."
   );
-
-  console.log(
-    "Salary:",
-    salary
-  );
-
-  console.log(
-    "Expenses:",
-    expenses
-  );
-
 }
 
 
-/*
-  Start application
-*/
+
 
 initializeApp();

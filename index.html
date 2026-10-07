@@ -14,24 +14,36 @@
   <link rel="stylesheet" href="style.css">
 
   <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script
+    src="https://cdn.jsdelivr.net/npm/chart.js"
+    defer
+  ></script>
 
   <!-- jsPDF -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+    defer
+  ></script>
+
+  <script src="script.js" defer></script>
 </head>
 
 <body>
 
-  
+  <!-- =========================
+       NAVIGATION
+  ========================== -->
+
   <header class="topbar">
+
     <div class="nav-container">
 
-      <a href="#" class="brand">
+      <a href="#dashboard" class="brand">
         <span class="brand-icon">₹</span>
         <span>Cash-Flow</span>
       </a>
 
-      <nav class="nav-links">
+      <nav class="nav-links" aria-label="Main navigation">
         <a href="#dashboard">Dashboard</a>
         <a href="#transactions">Transactions</a>
         <a href="#reports">Reports</a>
@@ -39,21 +51,31 @@
 
       <div class="nav-actions">
 
-        <select id="navCurrency" class="currency-select">
+        <select
+          id="navCurrency"
+          class="currency-select"
+          aria-label="Select currency"
+        >
           <option value="INR">INR ₹</option>
           <option value="USD">USD $</option>
           <option value="EUR">EUR €</option>
           <option value="GBP">GBP £</option>
         </select>
 
-        <button class="profile-button" aria-label="Profile">
-          <span>AK</span>
+        <button
+          type="button"
+          class="profile-button"
+          aria-label="Profile"
+        >
+          AK
         </button>
 
         <button
+          type="button"
           id="menuButton"
           class="menu-button"
           aria-label="Open menu"
+          aria-expanded="false"
         >
           ☰
         </button>
@@ -61,42 +83,65 @@
       </div>
 
     </div>
+
   </header>
 
-  
+
+  <!-- Mobile menu -->
+
   <div id="mobileMenu" class="mobile-menu">
+
     <a href="#dashboard">Dashboard</a>
     <a href="#transactions">Transactions</a>
     <a href="#reports">Reports</a>
+
   </div>
 
 
-
+  <!-- =========================
+       MAIN
+  ========================== -->
 
   <main id="dashboard" class="main-container">
+
+    <!-- Page header -->
 
     <section class="page-header">
 
       <div>
-        <span class="eyebrow">PERSONAL FINANCE</span>
 
-        <h1>Cash-Flow Dashboard</h1>
+        <span class="eyebrow">
+          PERSONAL FINANCE
+        </span>
+
+        <h1>
+          Cash-Flow Dashboard
+        </h1>
 
         <p>
           Track your salary, expenses and remaining balance.
         </p>
+
       </div>
 
       <div class="header-actions">
 
-        <select id="headerCurrency" class="currency-select">
+        <select
+          id="headerCurrency"
+          class="currency-select"
+          aria-label="Select currency"
+        >
           <option value="INR">INR ₹</option>
           <option value="USD">USD $</option>
           <option value="EUR">EUR €</option>
           <option value="GBP">GBP £</option>
         </select>
 
-        <button id="downloadReport" class="secondary-button">
+        <button
+          type="button"
+          id="downloadReport"
+          class="secondary-button"
+        >
           ↓ Download Report
         </button>
 
@@ -105,59 +150,95 @@
     </section>
 
 
-    
+    <!-- Critical alert -->
 
-    <div id="criticalAlert" class="critical-alert hidden">
+    <div
+      id="criticalAlert"
+      class="critical-alert hidden"
+      role="alert"
+    >
 
       <div class="alert-icon">
         !
       </div>
 
       <div>
-        <strong>Critical Balance Warning</strong>
+
+        <strong>
+          Critical Balance Warning
+        </strong>
 
         <p>
           Your remaining balance is below 10% of your salary.
         </p>
+
       </div>
 
     </div>
 
 
-   
+    <!-- =========================
+         SUMMARY
+    ========================== -->
+
     <section class="summary-grid">
 
-
+      <!-- Salary -->
 
       <article class="summary-card">
 
         <div class="card-top">
-          <span>Total Salary</span>
+
+          <span>
+            Total Salary
+          </span>
 
           <span class="card-icon salary-icon">
             ₹
           </span>
+
         </div>
 
-        <div id="salaryDisplay" class="money-value">
+        <div
+          id="salaryDisplay"
+          class="money-value"
+        >
           ₹0
         </div>
 
-        <button id="editSalary" class="text-button">
+        <button
+          type="button"
+          id="editSalary"
+          class="text-button"
+        >
           Edit Salary
         </button>
 
-        <form id="salaryForm" class="inline-form hidden">
+        <form
+          id="salaryForm"
+          class="inline-form hidden"
+        >
+
+          <label
+            for="salaryInput"
+            class="sr-only"
+          >
+            Total Salary
+          </label>
 
           <input
             id="salaryInput"
             type="number"
-            min="0"
+            min="0.01"
             step="0.01"
             placeholder="Enter salary"
+            required
           >
 
-          <button type="submit" class="small-button">
+          <button
+            type="submit"
+            class="small-button"
+          >
             Save
           </button>
 
@@ -166,19 +247,26 @@
       </article>
 
 
-      
+      <!-- Expenses -->
 
       <article class="summary-card">
 
         <div class="card-top">
-          <span>Total Expenses</span>
+
+          <span>
+            Total Expenses
+          </span>
 
           <span class="card-icon expense-icon">
             ↓
           </span>
+
         </div>
 
-        <div id="expenseTotal" class="money-value">
+        <div
+          id="expenseTotal"
+          class="money-value"
+        >
           ₹0
         </div>
 
@@ -189,24 +277,37 @@
       </article>
 
 
-      
+      <!-- Balance -->
 
-      <article id="balanceCard" class="summary-card">
+      <article
+        id="balanceCard"
+        class="summary-card"
+      >
 
         <div class="card-top">
-          <span>Remaining Balance</span>
+
+          <span>
+            Remaining Balance
+          </span>
 
           <span class="card-icon balance-icon">
             ↗
           </span>
+
         </div>
 
-        <div id="remainingBalance" class="money-value">
+        <div
+          id="remainingBalance"
+          class="money-value"
+        >
           ₹0
         </div>
 
-        <p id="balancePercentage" class="card-description">
-          100% of salary remaining
+        <p
+          id="balancePercentage"
+          class="card-description"
+        >
+          0% of salary remaining
         </p>
 
       </article>
@@ -214,31 +315,47 @@
     </section>
 
 
-
+    <!-- =========================
+         WORKSPACE
+    ========================== -->
 
     <section class="workspace-grid">
 
-      
+      <!-- Add expense -->
+
       <article class="panel add-expense-panel">
 
         <div class="panel-header">
 
           <div>
-            <span class="section-label">TRANSACTION</span>
 
-            <h2>Add Expense</h2>
+            <span class="section-label">
+              TRANSACTION
+            </span>
+
+            <h2>
+              Add Expense
+            </h2>
 
             <p>
               Record a new expense.
             </p>
+
           </div>
 
-          <span class="plus-icon">+</span>
+          <span class="plus-icon">
+            +
+          </span>
 
         </div>
 
 
-        <form id="expenseForm" class="expense-form">
+        <form
+          id="expenseForm"
+          class="expense-form"
+        >
+
+          <!-- Expense name -->
 
           <div class="form-group">
 
@@ -251,12 +368,19 @@
               type="text"
               placeholder="e.g. Grocery Shopping"
               autocomplete="off"
+              maxlength="100"
+              required
             >
 
-            <small id="nameError" class="error-message"></small>
+            <small
+              id="nameError"
+              class="error-message"
+            ></small>
 
           </div>
 
+
+          <!-- Expense amount -->
 
           <div class="form-group">
 
@@ -273,19 +397,26 @@
               <input
                 id="expenseAmount"
                 type="number"
-                min="0"
+                min="0.01"
                 step="0.01"
                 placeholder="0.00"
+                required
               >
 
             </div>
 
-            <small id="amountError" class="error-message"></small>
+            <small
+              id="amountError"
+              class="error-message"
+            ></small>
 
           </div>
 
 
-          <button type="submit" class="primary-button">
+          <button
+            type="submit"
+            class="primary-button"
+          >
             + Add Expense
           </button>
 
@@ -294,28 +425,40 @@
       </article>
 
 
-    
+      <!-- Chart -->
+
       <article class="panel chart-panel">
 
         <div class="panel-header">
 
           <div>
-            <span class="section-label">OVERVIEW</span>
 
-            <h2>Expense Overview</h2>
+            <span class="section-label">
+              OVERVIEW
+            </span>
+
+            <h2>
+              Expense Overview
+            </h2>
 
             <p>
               Your current salary distribution.
             </p>
+
           </div>
 
         </div>
 
+
         <div class="chart-wrapper">
 
-          <canvas id="expenseChart"></canvas>
+          <canvas
+            id="expenseChart"
+            aria-label="Expense and remaining balance chart"
+          ></canvas>
 
         </div>
+
 
         <div class="chart-legend">
 
@@ -355,37 +498,59 @@
     </section>
 
 
-   
-    <section id="transactions" class="panel transactions-panel">
+    <!-- =========================
+         TRANSACTIONS
+    ========================== -->
+
+    <section
+      id="transactions"
+      class="panel transactions-panel"
+    >
 
       <div class="panel-header transactions-header">
 
         <div>
-          <span class="section-label">HISTORY</span>
 
-          <h2>Recent Expenses</h2>
+          <span class="section-label">
+            HISTORY
+          </span>
+
+          <h2>
+            Recent Expenses
+          </h2>
 
           <p>
             All your recorded transactions.
           </p>
+
         </div>
 
-        <span id="expenseCount" class="count-badge">
+        <span
+          id="expenseCount"
+          class="count-badge"
+        >
           0
         </span>
 
       </div>
 
 
-      <div id="expenseList" class="expense-list">
-        <!-- JavaScript renders expenses here -->
-      </div>
+      <div
+        id="expenseList"
+        class="expense-list"
+      ></div>
 
     </section>
 
 
+    <!-- =========================
+         REPORT
+    ========================== -->
 
-    <section id="reports" class="panel report-panel">
+    <section
+      id="reports"
+      class="panel report-panel"
+    >
 
       <div>
 
@@ -393,7 +558,9 @@
           REPORT
         </span>
 
-        <h2>Financial Report</h2>
+        <h2>
+          Financial Report
+        </h2>
 
         <p>
           Export your current salary, expenses and remaining balance
@@ -402,7 +569,11 @@
 
       </div>
 
-      <button id="downloadReportBottom" class="secondary-button">
+      <button
+        type="button"
+        id="downloadReportBottom"
+        class="secondary-button"
+      >
         ↓ Download PDF
       </button>
 
@@ -411,22 +582,35 @@
   </main>
 
 
-  
+  <!-- =========================
+       TOAST
+  ========================== -->
 
-  <div id="toast" class="toast">
-    <span id="toastIcon">✓</span>
+  <div
+    id="toast"
+    class="toast"
+    role="status"
+    aria-live="polite"
+  >
+
+    <span id="toastIcon">
+      ✓
+    </span>
 
     <span id="toastMessage">
       Saved successfully.
     </span>
+
   </div>
 
 
-  <!-- =========================
-       CURRENCY LOADING
-  ========================== -->
+  <!-- Currency loading -->
 
-  <div id="currencyLoading" class="loading-overlay hidden">
+  <div
+    id="currencyLoading"
+    class="loading-overlay hidden"
+    aria-hidden="true"
+  >
 
     <div class="loading-box">
 
@@ -439,9 +623,6 @@
     </div>
 
   </div>
-
-
-  <script src="script.js"></script>
 
 </body>
 </html>
